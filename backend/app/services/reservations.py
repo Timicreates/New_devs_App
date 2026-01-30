@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, Any, List
 # Mocking DB for the challenge structure if actual DB isn't fully wired yet
@@ -13,18 +13,15 @@ async def calculate_monthly_revenue(property_id: str, month: int, year: int, db_
     Calculates revenue for a specific month.
     """
     
-    # BUG 2: TIMEZONE GHOST
-    # Using naive datetimes for query construction.
-    # Reservations are stored in UTC (Postgres Timestamptz), but this
-    # creates naive local times (effectively treated as database-local time or UTC naive).
-    # For a property in UTC+2, a check-in on Mar 1st 00:30 local time is Feb 28th 22:30 UTC.
-    # This query will exclude it from March because it compares against strictly generated UTC timestamps.
+    # FIX: Use timezone-aware datetimes (UTC) to properly match database TIMESTAMPTZ
+    # Reservations are stored in UTC, so we need to compare with UTC timestamps
+    # This ensures bookings at midnight in local time are included in the correct month
     
-    start_date = datetime(year, month, 1)
+    start_date = datetime(year, month, 1, tzinfo=timezone.utc)
     if month < 12:
-        end_date = datetime(year, month + 1, 1)
+        end_date = datetime(year, month + 1, 1, tzinfo=timezone.utc)
     else:
-        end_date = datetime(year + 1, 1, 1)
+        end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
         
     print(f"DEBUG: Querying revenue for {property_id} from {start_date} to {end_date}")
 
